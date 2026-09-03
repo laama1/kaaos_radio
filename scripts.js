@@ -98,7 +98,11 @@ function drawConstellation() {
             }
         });
 
-        const radius = particle.size + audioLevel * 3;
+        // Uses the overall level and a frequency band to make each particle pulse independently.
+        const frequencyLevel = analyser
+            ? frequencyData[index % frequencyData.length] / 255
+            : 0;
+        const radius = particle.size * (1 + audioLevel * 4 + frequencyLevel * 8);
         canvasContext.fillStyle = `rgba(114, 230, 255, ${0.35 + audioLevel * 0.55})`;
         canvasContext.beginPath();
         canvasContext.arc(particle.x, particle.y, radius, 0, Math.PI * 2);

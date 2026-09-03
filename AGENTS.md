@@ -11,3 +11,5 @@ The project is a small static site. The main page is `index.html`, the browser-s
 The audio stream used by the player is:
 
 https://kaaos.radio/stream
+
+- Add comments to every javascript function
