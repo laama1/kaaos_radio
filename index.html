@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/favicon.png" rel="shortcut icon">
+    <link href="style.css" rel="stylesheet">
+    <script src="scripts.js" defer></script>
+    <title>kaaos.radio</title>
+</head>
+<body>
+<canvas id="constellation" aria-hidden="true"></canvas>
+<pre>KAAOS.RADIO</pre>
+
+<div class="player-container">
+    <div class="player-title">KAaosRadio<br> Live Stream</div>
+    <button class="custom-audio-btn" id="playPauseBtn" aria-label="Play/Pause">
+        <svg id="playIcon" class="custom-audio-icon" viewBox="0 0 60 60">
+            <polygon points="15,10 50,30 15,50" />
+        </svg>
+        <svg id="pauseIcon" class="custom-audio-icon" viewBox="0 0 60 60" style="display:none">
+            <rect x="15" y="10" width="10" height="40" rx="3"/>
+            <rect x="35" y="10" width="10" height="40" rx="3"/>
+        </svg>
+    </button>
+    <audio id="audioPlayer">
+        <source src="https://kaaos.radio/stream">
+        Your browser does not support the audio element.
+    </audio>
+</div>
+
+</body>
+</html>
