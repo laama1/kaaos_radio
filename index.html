@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="/favicon.png" rel="shortcut icon">
     <link href="style.css" rel="stylesheet">
-    <script src="scripts/player.js" defer></script>
     <script src="scripts/constellation.js" defer></script>
+    <script src="scripts/player.js" defer></script>
     <script src="scripts/balloons.js" defer></script>
     <title>kaaos.radio</title>
 </head>
@@ -17,6 +17,7 @@
 
 <div class="player-container">
     <div class="player-title">KAaosRadio<br> 247 stream</div>
+    
     <button class="custom-audio-btn" id="playPauseBtn" aria-label="Play/Pause">
         <svg id="playIcon" class="custom-audio-icon" viewBox="0 0 60 60">
             <polygon points="15,10 50,30 15,50" />
@@ -26,10 +27,31 @@
             <rect x="35" y="10" width="10" height="40" rx="3"/>
         </svg>
     </button>
+
+    <div class="volume-control">
+        <label class="volume-label" for="volumeSlider">
+            <span>Volume</span>
+            <output id="volumeValue" for="volumeSlider">75%</output>
+        </label>
+        <input
+            class="volume-slider"
+            id="volumeSlider"
+            type="range"
+            min="0"
+            max="100"
+            value="75"
+            aria-label="Volume"
+        >
+    </div>
+
     <audio id="audioPlayer">
         <source src="https://kaaos.radio/stream2">
         Your browser does not support the audio element.
     </audio>
+
+    <div class="marquee">
+        <span id="marqueeText" class="marquee-text">KAAOS.RADIO</span>
+    </div>
 </div>
 
 </body>

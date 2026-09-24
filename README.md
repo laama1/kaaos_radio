@@ -1,15 +1,16 @@
 # README
+Install and configure icecast.
+Install and configure a web server.
 
-
-install dependencies using:
+Install node dependencies like sass using:
 
 > npm install
 
-compile scss using:
+Compile scss manually using:
 
 > npx sass style.scss style.css --no-source-map
 
-or
+or in real time after every save, using "watch" parameter
 
 > npx sass --watch style.scss:style.css
 
