@@ -57,4 +57,23 @@ work independently without it.
 Call `secondPlayer.destroy()` when removing a player to stop playback,
 polling, requests, and event listeners.
 
-Run player tests with `npm test`.
+## Running tests
+
+With Node.js and npm installed, run the tests from the project root:
+
+```sh
+npm test
+```
+
+This runs Node.js's built-in test runner (`node --test`). Tests use simulated
+DOM controls and Icecast responses; no web server, browser, or live stream
+is required.
+
+To run only the player and station-switching tests:
+
+```sh
+node --test tests/player.test.js
+```
+
+The output shows passing and failing tests. A nonzero exit code means a test
+failed.
