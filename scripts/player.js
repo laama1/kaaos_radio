@@ -28,6 +28,8 @@ class IcecastPlayer {
         this.statusUrl = statusUrl ? new URL(statusUrl, document.baseURI).href : null;
         this.mount = mount ?? sourceUrl.pathname;
         this.titleFormatter = titleFormatter;
+        this.trackHistory = [];
+        this.currentTrackTitle = null;
         this.beforePlay = beforePlay;
         this.destroyed = false;
         this.starting = false;
@@ -156,9 +158,14 @@ class IcecastPlayer {
                 throw new Error(`Icecast mount ${this.mount} or its title was not found`);
             }
             if (!this.destroyed) {
-                this.marqueeText.textContent = this.titleFormatter
+                const title = this.titleFormatter
                     ? this.titleFormatter(stream.title)
                     : stream.title;
+                if (stream.title !== this.currentTrackTitle) {
+                    this.trackHistory.push(title);
+                    this.currentTrackTitle = stream.title;
+                }
+                this.marqueeText.textContent = title;
             }
         } catch (error) {
             if (!request.signal.aborted) {
