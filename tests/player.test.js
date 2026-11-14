@@ -94,11 +94,17 @@ function fixture() {
         for (const selector of [
             'audio', '[data-player-toggle]', '[data-player-play]', '[data-player-pause]',
             '[data-player-volume]', '[data-player-volume-value]', '[data-player-title]',
-            '[data-station-name]'
+            '[data-station-name]', '.volume-label'
         ]) {
             controls.set(selector, new Control());
         }
         const root = {
+            style: {},
+            attributes: {},
+            // Stores each panel's accessible state.
+            setAttribute(name, value) {
+                this.attributes[name] = value;
+            },
             // Restricts selectors to this container.
             querySelector(selector) {
                 return controls.get(selector);
@@ -290,12 +296,25 @@ test('invalid initialization fails explicitly', () => {
     }, { streamUrl: '/live' }), /missing control: audio/);
 });
 
-// Exercises station buttons with the real player class and shared audio element.
-test('station buttons replace players without autoplay and preserve volume and cleanup', async () => {
-    const { create, context, timers, requests, errors } = fixture();
-    const initial = create();
-    initial.destroy();
-    const container = initial.container;
+// Exercises persistent panels, directional sliding, and isolated media controls.
+test('station buttons slide four persistent players without autoplay', async () => {
+    const { create, context, timers, errors } = fixture();
+    const track = {
+        style: {},
+        children: [],
+        // Records the four generated player panels.
+        appendChild(container) {
+            this.children.push(container);
+        }
+    };
+    const template = { content: { firstElementChild: {
+        // Supplies a fresh panel's controls for each template clone.
+        cloneNode() {
+            const placeholder = create();
+            placeholder.destroy();
+            return placeholder.container;
+        }
+    } } };
     const names = ['live', '247stream', 'chip', 'chillout'];
     const buttons = names.map(function createStationButton(name) {
         // Supplies the data attribute read by the station click handler.
@@ -303,10 +322,9 @@ test('station buttons replace players without autoplay and preserve volume and c
         button.dataset = { station: name };
         return button;
     });
-    // Exposes the existing player markup to the site's initialization script.
+    // Exposes the carousel track and template to site initialization.
     context.document.getElementById = function getElementById(id) {
-        assert.equal(id, 'radioPlayer');
-        return container;
+        return id === 'playerTrack' ? track : template;
     };
     // Exposes all four station buttons to the site's initialization script.
     context.document.querySelectorAll = function querySelectorAll(selector) {
@@ -320,35 +338,40 @@ test('station buttons replace players without autoplay and preserve volume and c
     };
     vm.runInContext(readFileSync(require.resolve('../scripts/main.js'), 'utf8'), context);
     let player = vm.runInContext('radioPlayer', context);
+    const original = player;
+    assert.equal(track.children.length, 4);
     assert.equal(player.audio.src, 'https://kaaos.radio/stream2');
     assert.equal(player.audio.paused, true);
-    assert.equal(timers.size, 1);
+    assert.equal(timers.size, 4);
     player.volumeSlider.value = '32';
     player.volumeSlider.dispatchEvent(new Event('input'));
     await player.togglePlayback();
     assert.equal(player.audio.paused, false);
-    const audio = player.audio;
     const mounts = ['/stream', '/stream2', '/chip', '/chill'];
 
     for (let index = 0; index < buttons.length; index += 1) {
         const previous = player;
-        const previousRequest = requests.at(-1);
         buttons[index].dispatchEvent(new Event('click'));
         player = vm.runInContext('radioPlayer', context);
         assert.notEqual(player, previous);
-        assert.equal(previous.destroyed, true);
-        assert.equal(previousRequest.options.signal.aborted, true);
-        assert.equal(player.audio, audio);
+        assert.equal(previous.destroyed, false);
+        assert.equal(previous.audio.paused, true);
+        assert.equal(previous.audio.bufferedSeconds, 0);
+        assert.notEqual(player.audio, previous.audio);
+        assert.equal(player.container, track.children[index]);
+        assert.equal(track.style.transform, `translateX(-${index * 100}%)`);
         assert.equal(player.audio.paused, true);
         assert.equal(player.audio.src, `https://kaaos.radio${mounts[index]}`);
         assert.equal(player.mount, mounts[index]);
-        assert.equal(player.audio.volume, 0.32);
-        assert.equal(player.volumeValue.textContent, '32%');
-        assert.equal(container.querySelector('[data-station-name]').textContent, names[index]);
+        assert.equal(player.audio.volume, index === 1 ? 0.32 : 0.75);
+        assert.equal(player.volumeValue.textContent, index === 1 ? '32%' : '75%');
+        assert.equal(player.container.querySelector('[data-station-name]').textContent, names[index]);
         assert.equal(player.marqueeText.textContent, `KAAOS.RADIO - ${names[index]}`);
-        assert.equal(timers.size, 1);
+        assert.equal(timers.size, 4);
         for (let other = 0; other < buttons.length; other += 1) {
             assert.equal(buttons[other].attributes['aria-pressed'], String(other === index));
+            assert.equal(track.children[other].inert, other !== index);
+            assert.equal(track.children[other].attributes['aria-hidden'], String(other !== index));
         }
         await player.togglePlayback();
         assert.equal(player.audio.paused, false);
@@ -358,12 +381,36 @@ test('station buttons replace players without autoplay and preserve volume and c
     }
 
     assert.equal(hookAudio.length, 5);
-    assert.ok(hookAudio.every(function usesSameAudio(element) {
-        // The analyser must not be reattached to a replacement media element.
-        return element === audio;
-    }));
-    player.destroy();
+    buttons[1].dispatchEvent(new Event('click'));
+    assert.equal(vm.runInContext('radioPlayer', context), original);
+    assert.equal(original.audio.paused, true);
+    assert.equal(original.audio.volume, 0.32);
+    vm.runInContext('for (const player of radioPlayers.values()) player.destroy();', context);
     await new Promise(setImmediate);
     assert.equal(timers.size, 0);
     assert.equal(errors.length, 0);
+});
+
+// Stops an asynchronous start without destroying the persistent player.
+test('stop cancels delayed playback and allows a later start', async () => {
+    const { create } = fixture();
+    let finish;
+    const player = create({
+        // Delays the visualizer hook to simulate switching during setup.
+        beforePlay() {
+            // Exposes the pending setup completion.
+            return new Promise((resolve) => {
+                finish = resolve;
+            });
+        }
+    });
+    const pending = player.togglePlayback();
+    player.stop();
+    finish();
+    await pending;
+    assert.equal(player.audio.paused, true);
+    player.beforePlay = null;
+    await player.togglePlayback();
+    assert.equal(player.audio.paused, false);
+    player.destroy();
 });

@@ -24,12 +24,17 @@ The four station buttons above the player select live (`/stream`),
 247stream (`/stream2`, selected initially), chip (`/chip`), or chillout
 (`/chill`) on `https://kaaos.radio`. Change URLs and Icecast mounts in
 the `stations` map in `scripts/main.js`.
-Selecting another station destroys the previous player and creates a new
-instance, stopping its playback and metadata polling. Volume is preserved,
-and playback waits for Play. Selecting the already-active station does nothing.
+Four persistent `.radio-player` panels are created from `radioPlayerTemplate`,
+each with its own audio element, controls, volume, and metadata polling.
+Selecting a station slides the contents inside the fixed `.player-container`:
+selecting a station to the right moves the contents left, and vice versa.
+The outgoing stream stops and clears its buffer; the incoming stream waits
+for Play. Each station remembers its volume. Inactive panels are inaccessible
+to keyboard and screen-reader navigation. Reduced-motion preferences disable
+the slide animation. Selecting the already-active station does nothing.
 All stations use the existing Icecast status endpoint for now-playing titles.
 
-To add another player, copy the `.player-container` markup in `index.html`,
+To add a standalone player, copy the `.radio-player` markup from the template in `index.html`,
 give its container a unique ID, and make the audio ID and volume input
 ID unique (including the label's `for` and output's `for` attributes).
 Keep the `data-player-*` attributes: controls are looked up only within
@@ -51,8 +56,9 @@ Cross-origin audio and status endpoints must allow browser access.
 
 Optional `titleFormatter(title)` customizes titles, and
 `beforePlay(audio)` connects a visualizer before playback. The site's
-constellation hook is intended for the main player only; other players
-work independently without it.
+constellation hook supports all four station panels, reusing each audio
+element's Web Audio source and connecting only the last played source.
+Standalone players work independently without it.
 
 Call `secondPlayer.destroy()` when removing a player to stop playback,
 polling, requests, and event listeners.

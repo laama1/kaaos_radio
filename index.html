@@ -23,7 +23,12 @@
     <button type="button" class="station-button" data-station="chillout" aria-pressed="false">chillout</button>
 </div>
 
-<div class="player-container" id="radioPlayer">
+<div class="player-container">
+    <div class="player-track" id="playerTrack"></div>
+</div>
+
+<template id="radioPlayerTemplate">
+<section class="radio-player" aria-label="Radio player">
     <div class="player-title"><span data-station-name>247 stream</span></div>
     
     <button class="custom-audio-btn" data-player-toggle aria-label="Play">
@@ -60,7 +65,8 @@
     <div class="marquee">
         <span data-player-title class="marquee-text">KAAOS.RADIO</span>
     </div>
-</div>
+</section>
+</template>
 
 </body>
 </html>

@@ -6,6 +6,8 @@ const MINIMUM_PARTICLE_COUNT = 20;
 let analyser;
 let frequencyData;
 let audioContext;
+const audioSources = new WeakMap();
+let activeAudioSource;
 let animationFrame;
 
 // Matches the canvas resolution to the viewport and accounts for high-density screens.
@@ -39,12 +41,20 @@ async function setupAnalyser(audio) {
     try {
         if (!analyser) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaElementSource(audio);
             analyser = audioContext.createAnalyser();
             analyser.fftSize = 128;
-            source.connect(analyser);
             analyser.connect(audioContext.destination);
             frequencyData = new Uint8Array(analyser.frequencyBinCount);
+        }
+        let source = audioSources.get(audio);
+        if (!source) {
+            source = audioContext.createMediaElementSource(audio);
+            audioSources.set(audio, source);
+        }
+        if (activeAudioSource !== source) {
+            activeAudioSource?.disconnect();
+            source.connect(analyser);
+            activeAudioSource = source;
         }
         await audioContext.resume();
     } catch (error) {

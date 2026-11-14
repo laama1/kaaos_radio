@@ -31,6 +31,7 @@ class IcecastPlayer {
         this.beforePlay = beforePlay;
         this.destroyed = false;
         this.starting = false;
+        this.playbackVersion = 0;
         this.statusRequest = null;
         this.listeners = new AbortController();
         this.audio.preload = 'none';
@@ -78,19 +79,22 @@ class IcecastPlayer {
         }
 
         this.starting = true;
+        const playbackVersion = ++this.playbackVersion;
         try {
             this.audio.load();
             if (this.beforePlay) {
                 await this.beforePlay(this.audio);
             }
-            if (!this.destroyed) {
+            if (!this.destroyed && playbackVersion === this.playbackVersion) {
                 await this.audio.play();
             }
         } catch (error) {
-            console.error('Unable to play the Icecast stream:', error);
+            if (playbackVersion === this.playbackVersion) {
+                console.error('Unable to play the Icecast stream:', error);
+            }
         } finally {
-            this.starting = false;
-            if (!this.destroyed) {
+            if (!this.destroyed && playbackVersion === this.playbackVersion) {
+                this.starting = false;
                 this.updatePlaybackState();
             }
         }
@@ -98,6 +102,8 @@ class IcecastPlayer {
 
     // Discards buffered live audio without downloading more until playback is requested.
     stop() {
+        this.playbackVersion += 1;
+        this.starting = false;
         this.audio.pause();
         this.audio.load();
         this.updatePlaybackState();
