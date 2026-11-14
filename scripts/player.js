@@ -1,59 +1,164 @@
-playPauseBtn.addEventListener('click', () => {
-    // Starts or pauses the stream and synchronizes the visible play/pause icon.
-    if (audio.paused) {
-        setupAnalyser();
-        if (audioContext) audioContext.resume();
-        audio.play();
-        playIcon.style.display = 'none';
-        pauseIcon.style.display = 'block';
-    } else {
-        audio.pause();
-        playIcon.style.display = 'block';
-        pauseIcon.style.display = 'none';
-    }
-});
-
-const nowPlayingEndpoint = 'https://stream.kaaosradio.fi:8001/status-json.xsl';
-const marqueeText = document.getElementById('marqueeText');
-const volumeSlider = document.getElementById('volumeSlider');
-const volumeValue = document.getElementById('volumeValue');
-
-// Applies the selected volume to the audio stream and updates the control display.
-function updateVolume() {
-    const volume = Number(volumeSlider.value);
-    audio.volume = volume / 100;
-    volumeValue.textContent = `${volume}%`;
-    volumeSlider.style.setProperty('--volume-level', `${volume}%`);
-}
-
-// Fetches the Icecast status and displays the stream2 title in the marquee.
-async function updateNowPlaying() {
-    console.log('Updating now-playing title...');
-    try {
-        const response = await fetch(nowPlayingEndpoint, { cache: 'no-store' });
-
-        if (!response.ok) {
-            throw new Error(`Icecast status request failed with HTTP ${response.status}`);
+class IcecastPlayer {
+    // Binds one container's controls to an independently configured Icecast stream.
+    constructor(container, {
+        streamUrl,
+        statusUrl = null,
+        mount = null,
+        titleFormatter = null,
+        beforePlay = null
+    }) {
+        if (typeof streamUrl !== 'string' || !streamUrl.trim()) {
+            throw new Error('IcecastPlayer requires a streamUrl');
+        }
+        const sourceUrl = new URL(streamUrl, document.baseURI);
+        this.container = typeof container === 'string'
+            ? document.querySelector(container)
+            : container;
+        if (!this.container) {
+            throw new Error('IcecastPlayer requires a player container');
         }
 
-        const status = await response.json();
-        const rawSources = status.icestats?.source;
-        const sources = Array.isArray(rawSources) ? rawSources : [rawSources];
-        const stream = sources.find((source) => source?.listenurl?.includes('stream2'));
+        this.audio = this.getControl('audio');
+        this.playPauseBtn = this.getControl('[data-player-toggle]');
+        this.playIcon = this.getControl('[data-player-play]');
+        this.pauseIcon = this.getControl('[data-player-pause]');
+        this.volumeSlider = this.getControl('[data-player-volume]');
+        this.volumeValue = this.getControl('[data-player-volume-value]');
+        this.marqueeText = this.getControl('[data-player-title]');
+        this.statusUrl = statusUrl ? new URL(statusUrl, document.baseURI).href : null;
+        this.mount = mount ?? sourceUrl.pathname;
+        this.titleFormatter = titleFormatter;
+        this.beforePlay = beforePlay;
+        this.destroyed = false;
+        this.starting = false;
+        this.statusRequest = null;
+        this.listeners = new AbortController();
+        this.audio.src = sourceUrl.href;
 
-        if (!stream?.title) {
-            throw new Error('The stream2 source or its title was not found');
+        this.playPauseBtn.addEventListener('click', this.togglePlayback.bind(this), {
+            signal: this.listeners.signal
+        });
+        this.volumeSlider.addEventListener('input', this.updateVolume.bind(this), {
+            signal: this.listeners.signal
+        });
+        for (const event of ['play', 'pause', 'ended', 'error']) {
+            this.audio.addEventListener(event, this.updatePlaybackState.bind(this), {
+                signal: this.listeners.signal
+            });
+        }
+        this.audio.addEventListener('error', this.reportAudioError.bind(this), {
+            signal: this.listeners.signal
+        });
+        this.updateVolume();
+        this.updatePlaybackState();
+        if (this.statusUrl) {
+            this.updateNowPlaying();
+            this.metadataTimer = setInterval(this.updateNowPlaying.bind(this), 10000);
+        }
+    }
+
+    // Rejects incomplete markup rather than binding controls from another player.
+    getControl(selector) {
+        const control = this.container.querySelector(selector);
+        if (!control) {
+            throw new Error(`IcecastPlayer is missing control: ${selector}`);
+        }
+        return control;
+    }
+
+    // Starts playback after an optional visualizer hook, reporting rejected play requests.
+    async togglePlayback() {
+        if (this.destroyed || this.starting) {
+            return;
+        }
+        if (!this.audio.paused) {
+            this.audio.pause();
+            return;
         }
 
-        marqueeText.textContent = stream.title;
-        // regexp remove Kaaosradio 24h (.*) - from the title
-        marqueeText.textContent = marqueeText.textContent.replace(/Kaaosradio 24h (.*?) - /, '');
-    } catch (error) {
-        console.error('Unable to update the now-playing title:', error);
+        this.starting = true;
+        try {
+            if (this.beforePlay) {
+                await this.beforePlay(this.audio);
+            }
+            if (!this.destroyed) {
+                await this.audio.play();
+            }
+        } catch (error) {
+            console.error('Unable to play the Icecast stream:', error);
+        } finally {
+            this.starting = false;
+            this.updatePlaybackState();
+        }
+    }
+
+    // Reflects actual media state, including playback failures and external pauses.
+    updatePlaybackState() {
+        const playing = !this.audio.paused && !this.audio.ended && !this.audio.error;
+        this.playIcon.style.display = playing ? 'none' : 'block';
+        this.pauseIcon.style.display = playing ? 'block' : 'none';
+        this.playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+        this.playPauseBtn.setAttribute('aria-pressed', String(playing));
+    }
+
+    // Reports asynchronous network or media decoding failures.
+    reportAudioError() {
+        console.error('Icecast audio playback failed:', this.audio.error);
+    }
+
+    // Applies this player's volume without affecting other instances.
+    updateVolume() {
+        const volume = Number(this.volumeSlider.value);
+        this.audio.volume = volume / 100;
+        this.volumeValue.textContent = `${volume}%`;
+        this.volumeSlider.style.setProperty('--volume-level', `${volume}%`);
+    }
+
+    // Selects an exact Icecast mount from either the single-source or array status format.
+    async updateNowPlaying() {
+        if (this.destroyed || this.statusRequest || !this.statusUrl) {
+            return;
+        }
+        const request = new AbortController();
+        this.statusRequest = request;
+        try {
+            const response = await fetch(this.statusUrl, {
+                cache: 'no-store',
+                signal: request.signal
+            });
+            if (!response.ok) {
+                throw new Error(`Icecast status request failed with HTTP ${response.status}`);
+            }
+            const status = await response.json();
+            const rawSources = status.icestats?.source;
+            const sources = Array.isArray(rawSources) ? rawSources : [rawSources];
+            // Compares paths so similarly named mounts cannot overwrite this player's title.
+            const stream = sources.find((source) => source?.listenurl
+                && new URL(source.listenurl, this.statusUrl).pathname === this.mount);
+            if (!stream?.title) {
+                throw new Error(`Icecast mount ${this.mount} or its title was not found`);
+            }
+            if (!this.destroyed) {
+                this.marqueeText.textContent = this.titleFormatter
+                    ? this.titleFormatter(stream.title)
+                    : stream.title;
+            }
+        } catch (error) {
+            if (!request.signal.aborted) {
+                console.error('Unable to update the now-playing title:', error);
+            }
+        } finally {
+            this.statusRequest = null;
+        }
+    }
+
+    // Stops playback, polling, pending metadata requests, and this instance's event listeners.
+    destroy() {
+        this.destroyed = true;
+        clearInterval(this.metadataTimer);
+        this.statusRequest?.abort();
+        this.listeners.abort();
+        this.audio.pause();
+        this.updatePlaybackState();
     }
 }
-
-volumeSlider.addEventListener('input', updateVolume);
-updateVolume();
-updateNowPlaying();
-setInterval(updateNowPlaying, 10000);

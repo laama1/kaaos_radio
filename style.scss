@@ -46,7 +46,7 @@ body {
     left: 0;
     height: auto;
     will-change: transform;
-    filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(4px 8px 6px rgba(0, 0, 0, 0.85));
 }
 
 pre {
@@ -57,6 +57,52 @@ pre {
     letter-spacing: 2px;
 }
 
+.station-selector {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+    box-sizing: border-box;
+    width: min(390px, calc(100% - 2rem));
+    margin-top: 2rem;
+    padding: 0.4rem;
+    border: 1px solid rgba($accent-color, 0.2);
+    border-radius: 18px;
+    background: rgba($player-background, 0.9);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+}
+
+.station-button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0.65rem 0.25rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: $accent-color;
+    font: inherit;
+    font-size: clamp(0.7rem, 3vw, 0.85rem);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+
+    &:hover {
+        background: rgba($accent-color, 0.12);
+    }
+
+    &[aria-pressed='true'] {
+        background: linear-gradient(135deg, $button-start, $button-end);
+        color: $player-background;
+        box-shadow: 0 3px 14px rgba($accent-color, 0.25);
+    }
+
+    &:focus-visible {
+        outline: 2px solid $accent-color;
+        outline-offset: 2px;
+    }
+}
+
 .player-container {
     position: relative;
     z-index: 1;
@@ -64,11 +110,12 @@ pre {
     border-radius: 24px;
     box-shadow: 0 6px 32px rgba(0, 0, 0, 0.35);
     padding: 3.5rem 3.5rem 2.5rem 3.5rem;
-    margin-top: 3rem;
+    margin-top: 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    max-width: 180px;
+    max-width: 280px;
+    width: min(390px, calc(100% - 2rem));
 }
 
 .player-title {

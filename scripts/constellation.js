@@ -1,7 +1,3 @@
-const audio = document.getElementById('audioPlayer');
-const playPauseBtn = document.getElementById('playPauseBtn');
-const playIcon = document.getElementById('playIcon');
-const pauseIcon = document.getElementById('pauseIcon');
 const constellation = document.getElementById('constellation');
 const canvasContext = constellation.getContext('2d');
 const particles = [];
@@ -37,21 +33,20 @@ function createParticles() {
 }
 
 // Connects the audio element to the Web Audio analyser so frequency data can be read.
-function setupAnalyser() {
-    if (analyser) {
-        return;
-    }
-
+async function setupAnalyser(audio) {
     try {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const source = audioContext.createMediaElementSource(audio);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 128;
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
-        frequencyData = new Uint8Array(analyser.frequencyBinCount);
+        if (!analyser) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaElementSource(audio);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 128;
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            frequencyData = new Uint8Array(analyser.frequencyBinCount);
+        }
+        await audioContext.resume();
     } catch (error) {
-        analyser = null;
+        console.error('Unable to initialize the constellation audio analyser:', error);
     }
 }
 

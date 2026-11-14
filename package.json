@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "test": "node --test",
     "watch": "sass --watch style.scss:style.css",
     "build": "sass style.scss style.css --no-source-map"
   },
