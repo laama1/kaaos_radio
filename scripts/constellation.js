@@ -1,6 +1,8 @@
 const constellation = document.getElementById('constellation');
 const canvasContext = constellation.getContext('2d');
 const particles = [];
+const MINIMUM_CONNECTION_DISTANCE = 250;
+const MINIMUM_PARTICLE_COUNT = 20;
 let analyser;
 let frequencyData;
 let audioContext;
@@ -19,7 +21,7 @@ function resizeConstellation() {
 // Creates the moving dots and gives each one a random position, speed, and size.
 function createParticles() {
     particles.length = 0;
-    const particleCount = Math.min(60, Math.max(28, Math.floor(window.innerWidth / 24)));
+    const particleCount = Math.min(MINIMUM_PARTICLE_COUNT, Math.max(28, Math.floor(window.innerWidth / 24)));
 
     for (let index = 0; index < particleCount; index += 1) {
         particles.push({
@@ -50,7 +52,65 @@ async function setupAnalyser(audio) {
     }
 }
 
-// Updates the constellation animation using audio levels to change movement and brightness.
+// Draws a black recess with a shadowed upper edge and a subtle lower inner rim.
+function drawParticleHole(particle, radius) {
+    const shading = canvasContext.createRadialGradient(
+        particle.x - radius * 0.25,
+        particle.y - radius * 0.35,
+        radius * 0.2,
+        particle.x,
+        particle.y,
+        radius
+    );
+    shading.addColorStop(0, '#000000');
+    shading.addColorStop(0.65, '#000000');
+    //shading.addColorStop(0.85, '#030608');
+    shading.addColorStop(0.85, '#37424b');
+    shading.addColorStop(1, '#152129');
+
+    canvasContext.fillStyle = '#000000';
+    canvasContext.beginPath();
+    canvasContext.arc(particle.x, particle.y, radius, 0, Math.PI * 2);
+    canvasContext.fill();
+
+    canvasContext.save();
+    canvasContext.clip();
+    canvasContext.fillStyle = shading;
+    canvasContext.fillRect(particle.x - radius, particle.y - radius, radius * 2, radius * 2);
+    canvasContext.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+    canvasContext.lineWidth = Math.max(0.3, radius * 0.15);
+    canvasContext.shadowColor = '#000000';
+    canvasContext.shadowBlur = radius * 0.35;
+    canvasContext.shadowOffsetY = radius * 0.2;
+    canvasContext.stroke();
+    canvasContext.restore();
+}
+
+// Covers intersecting regions after shading so neither hole's inner rim crosses the overlap.
+function drawHoleOverlaps(holes) {
+    canvasContext.fillStyle = '#000000';
+    for (let index = 0; index < holes.length; index += 1) {
+        const hole = holes[index];
+        for (let otherIndex = index + 1; otherIndex < holes.length; otherIndex += 1) {
+            const other = holes[otherIndex];
+            const distance = Math.hypot(hole.x - other.x, hole.y - other.y);
+            if (distance >= hole.radius + other.radius) {
+                continue;
+            }
+
+            canvasContext.save();
+            canvasContext.beginPath();
+            canvasContext.arc(hole.x, hole.y, hole.radius, 0, Math.PI * 2);
+            canvasContext.clip();
+            canvasContext.beginPath();
+            canvasContext.arc(other.x, other.y, other.radius, 0, Math.PI * 2);
+            canvasContext.fill();
+            canvasContext.restore();
+        }
+    }
+}
+
+// Updates the constellation animation using audio levels to change movement and size.
 function drawConstellation() {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -74,17 +134,16 @@ function drawConstellation() {
         if (particle.y > height + 10) particle.y = -10;
     });
 
-    // Draws lines between nearby particles and renders each particle as a glowing dot.
+    // Draws connections first so they cannot cross over the black particle holes.
     particles.forEach((particle, index) => {
         particles.slice(index + 1).forEach((otherParticle) => {
             const distanceX = particle.x - otherParticle.x;
             const distanceY = particle.y - otherParticle.y;
             const distance = Math.sqrt(distanceX ** 2 + distanceY ** 2);
-            const connectionDistance = 150 + audioLevel * 35;
+            const connectionDistance = MINIMUM_CONNECTION_DISTANCE + audioLevel * 35;
 
             if (distance < connectionDistance) {
-                const opacity = (1 - distance / connectionDistance) * (0.18 + audioLevel * 0.45);
-                canvasContext.strokeStyle = `rgba(85, 217, 255, ${opacity})`;
+                canvasContext.strokeStyle = '#000000';
                 canvasContext.lineWidth = 1;
                 canvasContext.beginPath();
                 canvasContext.moveTo(particle.x, particle.y);
@@ -92,17 +151,20 @@ function drawConstellation() {
                 canvasContext.stroke();
             }
         });
+    });
 
-        // Uses the overall level and a frequency band to make each particle pulse independently.
+    // Uses the overall level and a frequency band to make each particle pulse independently.
+    const holes = particles.map((particle, index) => {
         const frequencyLevel = analyser
             ? frequencyData[index % frequencyData.length] / 255
             : 0;
-        const radius = particle.size * (1 + audioLevel * 4 + frequencyLevel * 8);
-        canvasContext.fillStyle = `rgba(114, 230, 255, ${0.35 + audioLevel * 0.55})`;
-        canvasContext.beginPath();
-        canvasContext.arc(particle.x, particle.y, radius, 0, Math.PI * 2);
-        canvasContext.fill();
+        const radius = particle.size * 2 * (1 + audioLevel * 4 + frequencyLevel * 8);
+        return { x: particle.x, y: particle.y, radius };
     });
+    for (const hole of holes) {
+        drawParticleHole(hole, hole.radius);
+    }
+    drawHoleOverlaps(holes);
 
     animationFrame = requestAnimationFrame(drawConstellation);
 }

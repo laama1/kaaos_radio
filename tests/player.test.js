@@ -9,6 +9,8 @@ class Control extends EventTarget {
     constructor() {
         super();
         this.paused = true;
+        this.bufferedSeconds = 0;
+        this.loadCount = 0;
         this.value = '75';
         this.attributes = {};
         this.style = {
@@ -34,6 +36,13 @@ class Control extends EventTarget {
     pause() {
         this.paused = true;
         this.dispatchEvent(new Event('pause'));
+    }
+
+    // Simulates resetting a media resource and discarding its buffered audio.
+    load() {
+        this.pause();
+        this.bufferedSeconds = 0;
+        this.loadCount += 1;
     }
 }
 
@@ -125,6 +134,32 @@ test('multiple instances isolate source, playback, volume, and destruction', asy
     await second.togglePlayback();
     assert.equal(second.audio.paused, false);
     second.destroy();
+});
+
+// Verifies stopping, restarting, and destruction discard buffered live audio.
+test('playback resets the live buffer on start, stop, and destroy', async () => {
+    const { create } = fixture();
+    const player = create();
+    assert.equal(player.audio.preload, 'none');
+    player.audio.bufferedSeconds = 12;
+    await player.togglePlayback();
+    assert.equal(player.audio.bufferedSeconds, 0);
+    assert.equal(player.audio.loadCount, 1);
+    assert.equal(player.audio.paused, false);
+    player.audio.bufferedSeconds = 20;
+    await player.togglePlayback();
+    assert.equal(player.audio.bufferedSeconds, 0);
+    assert.equal(player.audio.loadCount, 2);
+    assert.equal(player.audio.paused, true);
+    assert.equal(player.playPauseBtn.attributes['aria-pressed'], 'false');
+    await player.togglePlayback();
+    assert.equal(player.audio.loadCount, 3);
+    assert.equal(player.audio.paused, false);
+    player.audio.bufferedSeconds = 8;
+    player.destroy();
+    assert.equal(player.audio.bufferedSeconds, 0);
+    assert.equal(player.audio.loadCount, 4);
+    assert.equal(player.audio.paused, true);
 });
 
 // Checks exact mount selection, status URL resolution, and optional title formatting.
@@ -293,7 +328,7 @@ test('station buttons replace players without autoplay and preserve volume and c
     await player.togglePlayback();
     assert.equal(player.audio.paused, false);
     const audio = player.audio;
-    const mounts = ['/stream', '/stream2', '/chip', '/chillout'];
+    const mounts = ['/stream', '/stream2', '/chip', '/chill'];
 
     for (let index = 0; index < buttons.length; index += 1) {
         const previous = player;

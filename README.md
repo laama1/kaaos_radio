@@ -22,7 +22,7 @@ Load the class before your initialization script, using `defer` for both.
 
 The four station buttons above the player select live (`/stream`),
 247stream (`/stream2`, selected initially), chip (`/chip`), or chillout
-(`/chillout`) on `https://kaaos.radio`. Change URLs and Icecast mounts in
+(`/chill`) on `https://kaaos.radio`. Change URLs and Icecast mounts in
 the `stations` map in `scripts/main.js`.
 Selecting another station destroys the previous player and creates a new
 instance, stopping its playback and metadata polling. Volume is preserved,
@@ -56,6 +56,9 @@ work independently without it.
 
 Call `secondPlayer.destroy()` when removing a player to stop playback,
 polling, requests, and event listeners.
+Stopping playback (including `player.stop()`) clears buffered audio.
+Starting playback reloads the stream to reconnect live rather than resuming
+old buffered content. Audio preloading is disabled while stopped.
 
 ## Running tests
 

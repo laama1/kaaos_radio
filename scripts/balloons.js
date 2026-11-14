@@ -1,4 +1,5 @@
 const BALLOON_COUNT = 12;
+const ENABLE_BALLOONS = false;
 const balloonsContainer = document.getElementById('balloons');
 const balloons = [];
 
@@ -68,8 +69,10 @@ function animateBalloons() {
     requestAnimationFrame(animateBalloons);
 }
 
-createBalloons();
-animateBalloons();
+if (ENABLE_BALLOONS) {
+    createBalloons();
+    animateBalloons();
+}
 
 // Keeps balloons' base positions within the new viewport bounds after a resize or orientation change.
 window.addEventListener('resize', () => {

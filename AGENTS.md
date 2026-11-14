@@ -14,3 +14,6 @@ https://kaaos.radio/stream which is an icecast stream that will play 24/7.
 - Add comments to every javascript function
 - Excpect the developer is running the `npx sass --watch style.scss:style.css` command so you dont need to ask to build the style.scss after every change.
 - Don't try to run web server because the project is running on a remote server, not local code base. There is a web server running allready and the developer will check the results with a web browser.
+
+## CSS stylesheet
+- When using gradients, bevel effects, shadows the lightning is coming from the upper light corner.

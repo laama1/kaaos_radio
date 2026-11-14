@@ -45,7 +45,7 @@ body {
 pre {
   position: relative;
   z-index: 1;
-  font-size: 2rem;
+  font-size: 3rem;
   margin-top: 2rem;
   letter-spacing: 2px;
 }
@@ -109,7 +109,7 @@ pre {
 }
 
 .player-title {
-  font-size: 1.2rem;
+  font-size: 2rem;
   margin-bottom: 1rem;
   color: #55d9ff;
   letter-spacing: 1px;
@@ -168,8 +168,8 @@ audio {
   background: linear-gradient(135deg, #00b8d9 0%, #72e6ff 100%);
   border: none;
   border-radius: 50%;
-  width: 140px;
-  height: 140px;
+  width: 180px;
+  height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,8 +190,8 @@ audio {
 }
 
 .custom-audio-icon {
-  width: 70px;
-  height: 70px;
+  width: 90px;
+  height: 90px;
   fill: #0d2a36;
 }
 
