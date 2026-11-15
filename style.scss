@@ -6,6 +6,7 @@ $button-start: #00b8d9;
 $button-end: #72e6ff;
 
 html {
+    font-size: 14px;
     overflow-x: hidden;
     /*overflow-y: hidden;*/
 }
@@ -46,7 +47,7 @@ body {
     left: 0;
     height: auto;
     will-change: transform;
-    filter: drop-shadow(4px 8px 6px rgba(0, 0, 0, 0.85));
+    filter: drop-shadow(0.285714rem 0.571429rem 0.428571rem rgba(0, 0, 0, 0.85));
 }
 
 pre {
@@ -54,7 +55,7 @@ pre {
     z-index: 1;
     font-size: 3rem;
     margin-top: 2rem;
-    letter-spacing: 2px;
+    letter-spacing: 0.142857rem;
 }
 
 .station-selector {
@@ -64,21 +65,21 @@ pre {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.4rem;
     box-sizing: border-box;
-    width: min(390px, calc(100% - 2rem));
+    width: min(25rem, calc(100% - 2rem));
     margin-top: 2rem;
     padding: 0.4rem;
-    border: 1px solid rgba($accent-color, 0.2);
-    border-radius: 18px;
+    border: 0.1rem solid rgba($accent-color, 0.2);
+    border-radius: 1.4rem;
     background: rgba($player-background, 0.9);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.3);
 }
 
 .station-button {
     min-width: 0;
-    min-height: 44px;
+    min-height: 3.14rem;
     padding: 0.65rem 0.25rem;
-    border: 1px solid transparent;
-    border-radius: 12px;
+    border: 0.07rem solid transparent;
+    border-radius: 0.85rem;
     background: transparent;
     color: $accent-color;
     font: inherit;
@@ -98,19 +99,19 @@ pre {
     &[aria-pressed='true'] {
         background: linear-gradient(135deg, $button-start, $button-end);
         color: $player-background;
-        box-shadow: 0 3px 14px rgba($accent-color, 0.25);
+        box-shadow: 0 0.214rem 1rem rgba($accent-color, 0.25);
     }
 
     &:focus-visible {
-        outline: 2px solid $accent-color;
-        outline-offset: 2px;
+        outline: 0.142rem solid $accent-color;
+        outline-offset: 0.142rem;
     }
 
     &[data-playing='true']::after {
         content: '';
-        flex: 0 0 12px;
-        width: 12px;
-        height: 12px;
+        flex: 0 0 0.85rem;
+        width: 0.85rem;
+        height: 0.85rem;
         background: currentColor;
         mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 9v6h4l5 4V5L7 9H3z'/%3E%3Cpath fill='none' stroke='black' stroke-width='2' stroke-linecap='round' d='M15 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14'/%3E%3C/svg%3E") center / contain no-repeat;
     }
@@ -120,11 +121,11 @@ pre {
     position: relative;
     z-index: 1;
     background: $player-background;
-    border-radius: 24px;
-    box-shadow: 0 6px 32px rgba(0, 0, 0, 0.35);
+    border-radius: 1.7rem;
+    box-shadow: 0 0.4rem 2.3rem rgba(0, 0, 0, 0.35);
     margin-top: 1rem;
     overflow: hidden;
-    width: min(390px, calc(100% - 2rem));
+    width: min(27.85rem, calc(100% - 2rem));
 }
 
 .player-track {
@@ -148,13 +149,13 @@ pre {
     font-size: 2rem;
     margin-bottom: 1rem;
     color: $accent-color;
-    letter-spacing: 1px;
+    letter-spacing: 0.07rem;
 }
 
 audio {
     width: 100%;
     outline: none;
-    filter: drop-shadow(0 2px 8px #000a);
+    filter: drop-shadow(0 0.142rem 0.57rem #000a);
     display: none;
 }
 
@@ -163,7 +164,7 @@ audio {
         transform: translateX(0);
     }
     90%, 100% {
-        transform: translateX(min(0px, calc(100cqw - 100%)));
+        transform: translateX(min(0rem, calc(100cqw - 100%)));
     }
 }
 
@@ -179,7 +180,7 @@ audio {
 .marquee-text {
     display: inline-block;
     color: $accent-color;
-    letter-spacing: 1px;
+    letter-spacing: 0.07rem;
     animation: marquee-scroll 12s linear infinite alternate;
 }
 
@@ -194,10 +195,10 @@ audio {
         transform: rotate(0deg) translateX(0);
     }
     25% {
-        transform: rotate(-3deg) translateX(-2px);
+        transform: rotate(-3deg) translateX(-0.142rem);
     }
     75% {
-        transform: rotate(3deg) translateX(2px);
+        transform: rotate(3deg) translateX(0.142rem);
     }
 }
 
@@ -205,12 +206,12 @@ audio {
     background: linear-gradient(135deg, $button-start 0%, $button-end 100%);
     border: none;
     border-radius: 50%;
-    width: 180px;
-    height: 180px;
+    width: 12.86rem;
+    height: 12.86rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 32px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0.428rem 2.29rem rgba(0, 0, 0, 0.35);
     cursor: pointer;
     transition: background 0.2s, transform 0.1s, box-shadow 0.1s;
     margin: 2.5rem 0 0 0;
@@ -222,13 +223,13 @@ audio {
 
 .custom-audio-btn:active {
     animation: none;
-    transform: translateY(5px) scale(0.96);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    transform: translateY(0.357rem) scale(0.96);
+    box-shadow: 0 0.143rem 0.714rem rgba(0, 0, 0, 0.35);
 }
 
 .custom-audio-icon {
-    width: 90px;
-    height: 90px;
+    width: 6.43rem;
+    height: 6.43rem;
     fill: $player-background;
 }
 
@@ -243,7 +244,7 @@ audio {
     margin-bottom: 0.55rem;
     color: $accent-color;
     font-size: 0.75rem;
-    letter-spacing: 1px;
+    letter-spacing: 0.07rem;
     text-transform: uppercase;
 }
 
@@ -251,9 +252,9 @@ audio {
     --volume-level: 75%;
     appearance: none;
     width: 100%;
-    height: 8px;
+    height: 0.571429rem;
     margin: 0;
-    border-radius: 999px;
+    border-radius: 71.357rem;
     background:
         linear-gradient(
             to right,
@@ -267,38 +268,39 @@ audio {
 
 .volume-slider::-webkit-slider-thumb {
     appearance: none;
-    width: 20px;
-    height: 20px;
-    border: 3px solid $player-background;
+    width: 1.428rem;
+    height: 1.428rem;
+    border: 0.214rem solid $player-background;
     border-radius: 50%;
     background: $accent-color;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0.142rem 0.571rem rgba(0, 0, 0, 0.45);
 }
 
 .volume-slider::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border: 3px solid $player-background;
+    width: 1rem;
+    height: 1rem;
+    border: 0.214rem solid $player-background;
     border-radius: 50%;
     background: $accent-color;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0.142rem 0.571rem rgba(0, 0, 0, 0.45);
 }
 
 .volume-slider:focus-visible {
-    outline: 2px solid $accent-color;
-    outline-offset: 5px;
+    outline: 0.14rem solid $accent-color;
+    outline-offset: 0.36rem;
 }
 
-@media (max-width: 500px) {
+// Media-query rem units use the browser's initial font size (normally 16px), not html's 14px.
+@media (max-width: 31.25rem) {
     .station-button {
         font-size: 0.65rem;
         padding-inline: 0.1rem;
         gap: 0.1rem;
 
         &[data-playing='true']::after {
-            flex-basis: 10px;
-            width: 10px;
-            height: 10px;
+            flex-basis: 0.714rem;
+            width: 0.714rem;
+            height: 0.714rem;
         }
     }
 
@@ -307,13 +309,13 @@ audio {
     }
 
     .custom-audio-btn {
-        width: 90px;
-        height: 90px;
+        width: 6.428rem;
+        height: 6.428rem;
     }
 
     .custom-audio-icon {
-        width: 40px;
-        height: 40px;
+        width: 2.857rem;
+        height: 2.857rem;
     }
 }
 

@@ -1,0 +1,68 @@
+{
+    "icestats": {
+        "admin": "icemaster@localhost",
+        "host": "stream.kaaosradio.fi",
+        "location": "Earth",
+        "server_id": "Icecast 2.4.4",
+        "server_start": "Mon, 14 Sep 2026 05:30:02 +0300",
+        "server_start_iso8601": "2026-09-14T05:30:02+0300",
+        "source": [
+            {
+                "audio_info": "bitrate=vbr;samplerate=44100;channels=2",
+                "channels": 2,
+                "genre": "Chillout, Downtempo, Lounge",
+                "listener_peak": 33,
+                "listeners": 5,
+                "listenurl": "http://stream.kaaosradio.fi:8000/chill",
+                "samplerate": 44100,
+                "server_description": "Kaaosradio 24/7 Chillout",
+                "server_name": "Kaaosradio 24h Chill",
+                "server_type": "audio/mpeg",
+                "server_url": "https://stream.kaaosradio.fi:8001/chill",
+                "stream_start": "Mon, 14 Sep 2026 05:31:01 +0300",
+                "stream_start_iso8601": "2026-09-14T05:31:01+0300",
+                "title": "Kaaosradio 24h - Kevin Bryce - Edumantione Ventus",
+                "yp_currently_playing": "Kaaosradio 24h - Kevin Bryce - Edumantione Ventus"
+            },
+            {
+                "audio_info": "bitrate=vbr;samplerate=44100;channels=2",
+                "channels": 2,
+                "genre": "Modules, Chiptune",
+                "listener_peak": 32,
+                "listeners": 4,
+                "listenurl": "http://stream.kaaosradio.fi:8000/chip",
+                "samplerate": 44100,
+                "server_description": "Kaaosradio 24/7 Chiptune",
+                "server_name": "Kaaosradio 24h Chiptune",
+                "server_type": "audio/mpeg",
+                "server_url": "https://stream.kaaosradio.fi:8001/chip",
+                "stream_start": "Mon, 14 Sep 2026 05:31:01 +0300",
+                "stream_start_iso8601": "2026-09-14T05:31:01+0300",
+                "title": "Kaaosradio 24h - Deepearth.void - Cake [Become The Void]",
+                "yp_currently_playing": "Kaaosradio 24h - Markus Weichselbaum - Logical [Rockabit Mix 2]"
+            },
+            {
+                "listeners": 0,
+                "listenurl": "http://stream.kaaosradio.fi:8000/stream",
+                "dummy": null
+            },
+            {
+                "audio_info": "bitrate=vbr;samplerate=44100;channels=2",
+                "channels": 2,
+                "genre": "Electronic",
+                "listener_peak": 31,
+                "listeners": 4,
+                "listenurl": "http://stream.kaaosradio.fi:8000/stream2",
+                "samplerate": 44100,
+                "server_description": "Kaaosradio 24/7",
+                "server_name": "Kaaosradio 24h",
+                "server_type": "audio/mpeg",
+                "server_url": "https://stream.kaaosradio.fi:8001/stream2",
+                "stream_start": "Mon, 14 Sep 2026 05:35:01 +0300",
+                "stream_start_iso8601": "2026-09-14T05:35:01+0300",
+                "title": "Kaaosradio 24h To Dubstep/DnB/Breakbeat - Wonk#ay Records - sLime - The Mould [Wonkout Vol. 1 - VA]",
+                "yp_currently_playing": "Kaaosradio 24h To Dubstep/DnB/Breakbeat - Wonk#ay Records - sLime - The Mould [Wonkout Vol. 1 - VA]"
+            }
+        ]
+    }
+}
