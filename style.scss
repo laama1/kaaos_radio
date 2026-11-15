@@ -84,6 +84,10 @@ pre {
     font: inherit;
     font-size: clamp(0.7rem, 3vw, 0.85rem);
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
     cursor: pointer;
     transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 
@@ -100,6 +104,15 @@ pre {
     &:focus-visible {
         outline: 2px solid $accent-color;
         outline-offset: 2px;
+    }
+
+    &[data-playing='true']::after {
+        content: '';
+        flex: 0 0 12px;
+        width: 12px;
+        height: 12px;
+        background: currentColor;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M3 9v6h4l5 4V5L7 9H3z'/%3E%3Cpath fill='none' stroke='black' stroke-width='2' stroke-linecap='round' d='M15 8c3 2 3 6 0 8m3-11c5 4 5 10 0 14'/%3E%3C/svg%3E") center / contain no-repeat;
     }
 }
 
@@ -146,15 +159,16 @@ audio {
 }
 
 @keyframes marquee-scroll {
-    0% {
-        transform: translateX(100%);
+    0%, 10% {
+        transform: translateX(0);
     }
-    100% {
-        transform: translateX(-100%);
+    90%, 100% {
+        transform: translateX(min(0px, calc(100cqw - 100%)));
     }
 }
 
 .marquee {
+    container-type: inline-size;
     width: 100%;
     overflow: hidden;
     margin-top: 1.5rem;
@@ -166,15 +180,12 @@ audio {
     display: inline-block;
     color: $accent-color;
     letter-spacing: 1px;
-    padding-left: 50%;
-    animation: marquee-scroll 12s linear infinite;
-    max-width: 25rem;
+    animation: marquee-scroll 12s linear infinite alternate;
 }
 
 @media (prefers-reduced-motion: reduce) {
     .marquee-text {
         animation: none;
-        padding-left: 0;
     }
 }
 
@@ -279,6 +290,18 @@ audio {
 }
 
 @media (max-width: 500px) {
+    .station-button {
+        font-size: 0.65rem;
+        padding-inline: 0.1rem;
+        gap: 0.1rem;
+
+        &[data-playing='true']::after {
+            flex-basis: 10px;
+            width: 10px;
+            height: 10px;
+        }
+    }
+
     .radio-player {
         padding: 1.2rem;
     }

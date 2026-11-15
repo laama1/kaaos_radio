@@ -17,3 +17,7 @@ https://kaaos.radio/stream which is an icecast stream that will play 24/7.
 
 ## CSS stylesheet
 - When using gradients, bevel effects, shadows the lightning is coming from the upper light corner.
+- Use relative units instead of pixels. It will make the page scale in big display resolutions.
+
+## Javascript effects
+- Use relative units instead of pixels.

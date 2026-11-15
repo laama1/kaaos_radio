@@ -1,13 +1,17 @@
 const constellation = document.getElementById('constellation');
 const canvasContext = constellation.getContext('2d');
 const particles = [];
+
 const MINIMUM_CONNECTION_DISTANCE = 250;
 const MINIMUM_PARTICLE_COUNT = 20;
+const PARTICLE_SPEED = 2;
+const PARTICLE_COLLISION_ENABLED = true;
+const PARTICLE_COLLISION_DISTANCE = 35;
+
 let analyser;
 let frequencyData;
 let audioContext;
 const audioSources = new WeakMap();
-let activeAudioSource;
 let animationFrame;
 
 // Matches the canvas resolution to the viewport and accounts for high-density screens.
@@ -29,8 +33,8 @@ function createParticles() {
         particles.push({
             x: Math.random() * window.innerWidth,
             y: Math.random() * window.innerHeight,
-            velocityX: (Math.random() - 0.5) * 0.24,
-            velocityY: (Math.random() - 0.5) * 0.24,
+            velocityX: (Math.random() - 0.5) * 0.24 * PARTICLE_SPEED,
+            velocityY: (Math.random() - 0.5) * 0.24 * PARTICLE_SPEED,
             size: Math.random() * 1.5 + 1
         });
     }
@@ -49,12 +53,8 @@ async function setupAnalyser(audio) {
         let source = audioSources.get(audio);
         if (!source) {
             source = audioContext.createMediaElementSource(audio);
-            audioSources.set(audio, source);
-        }
-        if (activeAudioSource !== source) {
-            activeAudioSource?.disconnect();
             source.connect(analyser);
-            activeAudioSource = source;
+            audioSources.set(audio, source);
         }
         await audioContext.resume();
     } catch (error) {
@@ -120,6 +120,41 @@ function drawHoleOverlaps(holes) {
     }
 }
 
+// Separates nearby centers and sends each pair outward on perpendicular paths.
+function resolveParticleCollisions(particleList) {
+    if (!PARTICLE_COLLISION_ENABLED) {
+        return;
+    }
+    for (let index = 0; index < particleList.length; index += 1) {
+        const particle = particleList[index];
+        for (let otherIndex = index + 1; otherIndex < particleList.length; otherIndex += 1) {
+            const other = particleList[otherIndex];
+            const dx = other.x - particle.x;
+            const dy = other.y - particle.y;
+            const distance = Math.hypot(dx, dy);
+            if (distance >= PARTICLE_COLLISION_DISTANCE) {
+                continue;
+            }
+
+            // Coincident centers use a fixed axis to avoid dividing by zero.
+            const normalX = distance === 0 ? 1 : dx / distance;
+            const normalY = distance === 0 ? 0 : dy / distance;
+            const separation = (PARTICLE_COLLISION_DISTANCE - distance) / 2;
+            particle.x -= normalX * separation;
+            particle.y -= normalY * separation;
+            other.x += normalX * separation;
+            other.y += normalY * separation;
+
+            const speed = Math.hypot(particle.velocityX, particle.velocityY);
+            const otherSpeed = Math.hypot(other.velocityX, other.velocityY);
+            particle.velocityX = (-normalX - normalY) * Math.SQRT1_2 * speed;
+            particle.velocityY = (-normalY + normalX) * Math.SQRT1_2 * speed;
+            other.velocityX = (normalX - normalY) * Math.SQRT1_2 * otherSpeed;
+            other.velocityY = (normalY + normalX) * Math.SQRT1_2 * otherSpeed;
+        }
+    }
+}
+
 // Updates the constellation animation using audio levels to change movement and size.
 function drawConstellation() {
     const width = window.innerWidth;
@@ -143,6 +178,8 @@ function drawConstellation() {
         if (particle.y < -10) particle.y = height + 10;
         if (particle.y > height + 10) particle.y = -10;
     });
+
+    resolveParticleCollisions(particles);
 
     // Draws connections first so they cannot cross over the black particle holes.
     particles.forEach((particle, index) => {

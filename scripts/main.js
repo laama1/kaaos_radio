@@ -33,9 +33,25 @@ for (const name of stationNames) {
             return title.replace(/Kaaosradio 24h (.*?) - /, '');
         }
     }));
+    const audio = radioPlayers.get(name).audio;
+    for (const event of ['playing', 'pause', 'waiting', 'ended', 'error', 'emptied']) {
+        audio.addEventListener(event, updateStationPlayback.bind(null, name));
+    }
 }
 
-// Slides the persistent panels in station order and stops the outgoing live stream.
+// Marks the stream that is actually playing, independently of the selected panel.
+function updateStationPlayback(name, event) {
+    const audio = radioPlayers.get(name).audio;
+    const playing = event.type === 'playing' && !audio.paused && !audio.ended && !audio.error;
+    for (const button of stationButtons) {
+        if (button.dataset.station === name) {
+            button.setAttribute('data-playing', String(playing));
+            button.setAttribute('aria-label', playing ? `${name} (playing)` : name);
+        }
+    }
+}
+
+// Slides the persistent panels without changing any station's playback.
 function selectStation(name) {
     if (!radioPlayers.has(name)) {
         throw new Error(`Unknown station: ${name}`);
@@ -44,7 +60,6 @@ function selectStation(name) {
         return;
     }
 
-    radioPlayer?.stop();
     radioPlayer = radioPlayers.get(name);
     selectedStation = name;
     playerTrack.style.transform = `translateX(-${stationNames.indexOf(name) * 100}%)`;

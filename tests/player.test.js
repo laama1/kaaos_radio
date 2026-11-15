@@ -30,6 +30,7 @@ class Control extends EventTarget {
     async play() {
         this.paused = false;
         this.dispatchEvent(new Event('play'));
+        this.dispatchEvent(new Event('playing'));
     }
 
     // Simulates pauses from either the user or external media controls.
@@ -115,6 +116,93 @@ function fixture() {
     return { create, timers, errors, responses, requests, Player: context.Player, context };
 }
 
+// Verifies one network request fans out to all mounts, including cached late subscribers.
+test('shared status polls once, updates all mounts, and survives individual destruction', async () => {
+    const { create, responses, requests, timers, errors } = fixture();
+    let deliver;
+    // Holds the first response while all four players subscribe.
+    responses.push(new Promise((resolve) => {
+        deliver = resolve;
+    }));
+    const players = ['live', 'stream2', 'chip', 'chill'].map(function createStation(mount) {
+        // Uses relative and absolute forms of the same status URL.
+        return create({
+            streamUrl: `/${mount}`,
+            statusUrl: mount === 'live' ? '/status' : 'https://site.example/status'
+        });
+    });
+    assert.equal(requests.length, 1);
+    assert.equal(timers.size, 1);
+    await players[1].updateNowPlaying();
+    assert.equal(requests.length, 1);
+    deliver({
+        ok: true,
+        // Supplies all mounts in a single Icecast response.
+        async json() {
+            return { icestats: { source: ['live', 'stream2', 'chip', 'chill'].map(function source(mount) {
+                // Returns distinct titles to verify exact per-player routing.
+                return { listenurl: `https://icecast.example/${mount}`, title: `${mount} song` };
+            }) } };
+        }
+    });
+    await new Promise(setImmediate);
+    for (const player of players) {
+        assert.equal(player.marqueeText.textContent, `${player.mount.slice(1)} song`);
+        assert.deepEqual(Array.from(player.trackHistory), [`${player.mount.slice(1)} song`]);
+    }
+    const late = create({ statusUrl: '/status' });
+    assert.equal(late.marqueeText.textContent, 'live song');
+    assert.equal(requests.length, 1);
+    responses.push({
+        ok: true,
+        // Missing live metadata must not prevent other subscribers from updating.
+        async json() {
+            return { icestats: { source: [
+                { listenurl: 'https://icecast.example/stream2', title: 'next song' },
+                { listenurl: 'https://icecast.example/chip', title: 'chip song' },
+                { listenurl: 'https://icecast.example/chill', title: 'chill song' }
+            ] } };
+        }
+    });
+    await Array.from(timers)[0]();
+    assert.equal(requests.length, 2);
+    assert.equal(players[1].marqueeText.textContent, 'next song');
+    assert.deepEqual(Array.from(players[1].trackHistory), ['stream2 song', 'next song']);
+    assert.equal(players[0].marqueeText.textContent, 'live song');
+    assert.equal(errors.length, 2);
+    players[0].destroy();
+    assert.equal(timers.size, 1);
+    // Leaves the next network request pending until the final subscriber is removed.
+    const pending = players[1].updateNowPlaying();
+    const request = requests.at(-1);
+    for (const player of players.slice(1)) {
+        player.destroy();
+        assert.equal(request.options.signal.aborted, false);
+    }
+    late.destroy();
+    await pending;
+    assert.equal(request.options.signal.aborted, true);
+    assert.equal(timers.size, 0);
+    assert.equal(errors.length, 2);
+});
+
+// Ensures different Icecast servers do not share cached status or polling lifecycles.
+test('different status URLs have independent services', async () => {
+    const { create, requests, timers } = fixture();
+    const first = create({ statusUrl: '/status' });
+    const second = create({ statusUrl: 'https://other.example/status' });
+    assert.notEqual(first.statusService, second.statusService);
+    assert.equal(requests.length, 2);
+    assert.equal(timers.size, 2);
+    first.destroy();
+    assert.equal(requests[0].options.signal.aborted, true);
+    assert.equal(requests[1].options.signal.aborted, false);
+    assert.equal(timers.size, 1);
+    second.destroy();
+    await new Promise(setImmediate);
+    assert.equal(timers.size, 0);
+});
+
 // Confirms playback, controls, and source URLs remain independent.
 test('multiple instances isolate source, playback, volume, and destruction', async () => {
     const { create } = fixture();
@@ -179,7 +267,7 @@ test('metadata accepts both Icecast source shapes and matches exact mounts', asy
                 return title.toUpperCase();
             }
         });
-        player.statusRequest.abort();
+        player.statusService.request.abort();
         await new Promise(setImmediate);
         const source = { listenurl: 'https://icecast.example/live', title: 'selected' };
         responses.push({
@@ -214,6 +302,43 @@ test('explicit mount and unformatted titles are supported', async () => {
     await new Promise(setImmediate);
     assert.equal(player.marqueeText.textContent, 'Artist - Track');
     player.destroy();
+});
+
+// Records title transitions, not repeated polls, independently for each player.
+test('track history records formatted song changes and returning songs per player', async () => {
+    const { create, responses, errors } = fixture();
+    const first = create({
+        // Demonstrates the same formatting used by the marquee.
+        titleFormatter(title) {
+            return title.replace('Station - ', '');
+        }
+    });
+    const second = create();
+    first.statusUrl = 'https://site.example/status';
+    second.statusUrl = first.statusUrl;
+    for (const title of ['Station - Song A', 'Station - Song A', 'Station - Song B', 'Station - Song A']) {
+        responses.push({
+            ok: true,
+            // Supplies a metadata poll for the selected mount.
+            async json() {
+                return { icestats: { source: { listenurl: 'https://site.example/live', title } } };
+            }
+        });
+        await first.updateNowPlaying();
+    }
+    assert.deepEqual(Array.from(first.trackHistory), ['Song A', 'Song B', 'Song A']);
+    assert.equal(first.marqueeText.textContent, 'Song A');
+    assert.equal(second.trackHistory.length, 0);
+    responses.push({ ok: false, status: 503 });
+    await first.updateNowPlaying();
+    assert.equal(first.trackHistory.length, 3);
+    assert.equal(errors.length, 1);
+    first.stop();
+    assert.equal(first.trackHistory.length, 3);
+    first.destroy();
+    await first.updateNowPlaying();
+    assert.equal(first.trackHistory.length, 3);
+    second.destroy();
 });
 
 // Validates opt-in metadata and cleanup of an in-flight metadata request.
@@ -297,7 +422,7 @@ test('invalid initialization fails explicitly', () => {
 });
 
 // Exercises persistent panels, directional sliding, and isolated media controls.
-test('station buttons slide four persistent players without autoplay', async () => {
+test('station buttons slide persistent players without changing playback', async () => {
     const { create, context, timers, errors } = fixture();
     const track = {
         style: {},
@@ -342,48 +467,70 @@ test('station buttons slide four persistent players without autoplay', async () 
     assert.equal(track.children.length, 4);
     assert.equal(player.audio.src, 'https://kaaos.radio/stream2');
     assert.equal(player.audio.paused, true);
-    assert.equal(timers.size, 4);
+    assert.equal(timers.size, 1);
     player.volumeSlider.value = '32';
     player.volumeSlider.dispatchEvent(new Event('input'));
     await player.togglePlayback();
     assert.equal(player.audio.paused, false);
+    assert.equal(buttons[1].attributes['data-playing'], 'true');
+    assert.equal(buttons[1].attributes['aria-label'], '247stream (playing)');
+    player.audio.dispatchEvent(new Event('waiting'));
+    assert.equal(buttons[1].attributes['data-playing'], 'false');
+    player.audio.dispatchEvent(new Event('playing'));
+    assert.equal(buttons[1].attributes['data-playing'], 'true');
     const mounts = ['/stream', '/stream2', '/chip', '/chill'];
 
     for (let index = 0; index < buttons.length; index += 1) {
         const previous = player;
+        previous.audio.bufferedSeconds = 12;
+        const previousLoadCount = previous.audio.loadCount;
         buttons[index].dispatchEvent(new Event('click'));
         player = vm.runInContext('radioPlayer', context);
         assert.notEqual(player, previous);
         assert.equal(previous.destroyed, false);
-        assert.equal(previous.audio.paused, true);
-        assert.equal(previous.audio.bufferedSeconds, 0);
+        assert.equal(previous.audio.paused, false);
+        assert.equal(previous.audio.bufferedSeconds, 12);
+        assert.equal(previous.audio.loadCount, previousLoadCount);
         assert.notEqual(player.audio, previous.audio);
         assert.equal(player.container, track.children[index]);
         assert.equal(track.style.transform, `translateX(-${index * 100}%)`);
-        assert.equal(player.audio.paused, true);
+        assert.equal(buttons[names.indexOf(previous.container.querySelector('[data-station-name]').textContent)]
+            .attributes['data-playing'], 'true');
         assert.equal(player.audio.src, `https://kaaos.radio${mounts[index]}`);
         assert.equal(player.mount, mounts[index]);
         assert.equal(player.audio.volume, index === 1 ? 0.32 : 0.75);
         assert.equal(player.volumeValue.textContent, index === 1 ? '32%' : '75%');
         assert.equal(player.container.querySelector('[data-station-name]').textContent, names[index]);
         assert.equal(player.marqueeText.textContent, `KAAOS.RADIO - ${names[index]}`);
-        assert.equal(timers.size, 4);
+        assert.equal(timers.size, 1);
         for (let other = 0; other < buttons.length; other += 1) {
             assert.equal(buttons[other].attributes['aria-pressed'], String(other === index));
             assert.equal(track.children[other].inert, other !== index);
             assert.equal(track.children[other].attributes['aria-hidden'], String(other !== index));
         }
-        await player.togglePlayback();
+        if (player.audio.paused) {
+            await player.togglePlayback();
+        }
         assert.equal(player.audio.paused, false);
+        assert.equal(buttons[index].attributes['data-playing'], 'true');
+        assert.equal(buttons[index].attributes['aria-label'], `${names[index]} (playing)`);
         buttons[index].dispatchEvent(new Event('click'));
         assert.equal(vm.runInContext('radioPlayer', context), player);
         assert.equal(player.audio.paused, false);
     }
 
-    assert.equal(hookAudio.length, 5);
+    assert.equal(hookAudio.length, 4);
     buttons[1].dispatchEvent(new Event('click'));
     assert.equal(vm.runInContext('radioPlayer', context), original);
+    assert.equal(original.audio.paused, false);
+    assert.ok(buttons.every(function isPlaying(button) {
+        // All four streams keep playing regardless of which panel is visible.
+        return button.attributes['data-playing'] === 'true';
+    }));
+    await original.togglePlayback();
     assert.equal(original.audio.paused, true);
+    assert.equal(buttons[1].attributes['data-playing'], 'false');
+    assert.equal(vm.runInContext("radioPlayers.get('chillout').audio.paused", context), false);
     assert.equal(original.audio.volume, 0.32);
     vm.runInContext('for (const player of radioPlayers.values()) player.destroy();', context);
     await new Promise(setImmediate);
